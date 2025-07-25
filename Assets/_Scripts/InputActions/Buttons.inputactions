@@ -1,0 +1,34 @@
+{
+    "name": "Buttons",
+    "maps": [
+        {
+            "name": "Buttons",
+            "id": "f972d389-cdd3-4e06-9b18-64df27276a74",
+            "actions": [
+                {
+                    "name": "LeftButton",
+                    "type": "Button",
+                    "id": "1239a896-5376-4281-a1b3-cc650c502107",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "c34190bb-5dde-495b-b27e-7bc815f23210",
+                    "path": "",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "LeftButton",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        }
+    ],
+    "controlSchemes": []
+}
