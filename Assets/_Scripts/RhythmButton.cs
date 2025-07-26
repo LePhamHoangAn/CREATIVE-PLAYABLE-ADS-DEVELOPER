@@ -5,30 +5,39 @@ public class RhythmButton : MonoBehaviour
 {
     public int buttonIndex;
     public CharacterController character;
-    public string direction; // "Up", "Down", "Left", "Right"
+    public string direction; 
 
     [Header("Visuals")]
     [SerializeField] private ParticleSystem pressEffect;
 
     [Header("Hit Zone")]
-    public Transform hitZone; // Assign the HitZone transform in Inspector
+    public Transform hitZone; 
 
     [Header("Rating UI")]
-    public Image ratingImage; // UI Image to display rating
+    public Image ratingImage; 
     public Sprite badSprite, goodSprite, sickSprite;
 
     [Header("Timing Windows (seconds)")]
-    public float perfectWindow = 0.05f; // 50 ms for Sick!!
-    public float goodWindow = 0.15f;    // 150 ms for Good
+    public float perfectWindow = 0.05f; 
+    public float goodWindow = 0.15f;    
+
+    [Header("Battle")]
+    public BattleBar battleBar;
+
+    [Header("Score Settings")]
+    public float badScoreDelta = -0.02f;
+    public float goodScoreDelta = 0.03f;
+    public float perfectScoreDelta = 0.05f;
+
     private bool inputEnabled = false;
 
     public void EnableInput(bool value)
     {
         inputEnabled = value;
     }
+
     private void Update()
     {
-        // Optional: test with keyboard input
         if (Input.GetKeyDown(KeyCode.Alpha1) && buttonIndex == 0) OnPressed();
         if (Input.GetKeyDown(KeyCode.Alpha2) && buttonIndex == 1) OnPressed();
         if (Input.GetKeyDown(KeyCode.Alpha3) && buttonIndex == 2) OnPressed();
@@ -42,38 +51,43 @@ public class RhythmButton : MonoBehaviour
             Debug.Log($"Input disabled for {gameObject.name}");
             return;
         }
+
         Debug.Log($"Button {buttonIndex} pressed!");
+
         PlayParticle();
+
         if (character != null)
         {
             character.SetDirection(direction);
         }
+
         Note noteToHit = FindHittableNote();
+        string rating = "Bad";
+        float scoreDelta = badScoreDelta; 
+
         if (noteToHit != null)
         {
             float unitDiff = Mathf.Abs(noteToHit.transform.position.y - hitZone.position.y);
-
             float timeDiff = unitDiff / noteToHit.speed;
 
             Debug.Log($"unitDiff: {unitDiff:F3} | speed: {noteToHit.speed:F2} | timeDiff: {timeDiff:F3}");
 
-            string rating = "Bad";
-            Sprite ratingSprite = badSprite;
-
             if (timeDiff <= perfectWindow)
             {
                 rating = "Sick!!";
-                ratingSprite = sickSprite;
+                scoreDelta = perfectScoreDelta; 
+                ShowRating(sickSprite);
             }
             else if (timeDiff <= goodWindow)
             {
                 rating = "Good";
-                ratingSprite = goodSprite;
+                scoreDelta = goodScoreDelta; 
+                ShowRating(goodSprite);
             }
-
-            Debug.Log($"Hit rating: {rating}");
-
-            ShowRating(ratingSprite);
+            else
+            {
+                ShowRating(badSprite);
+            }
 
             Destroy(noteToHit.gameObject);
         }
@@ -81,6 +95,13 @@ public class RhythmButton : MonoBehaviour
         {
             Debug.Log("Miss! No note in hit zone.");
             ShowRating(badSprite);
+        }
+
+        Debug.Log($"Rating: {rating} | Score Delta: {scoreDelta}");
+
+        if (battleBar != null)
+        {
+            battleBar.Adjust(scoreDelta);
         }
     }
 
@@ -97,23 +118,18 @@ public class RhythmButton : MonoBehaviour
     {
         Collider2D[] colliders = Physics2D.OverlapBoxAll(hitZone.position, hitZone.localScale, 0f);
 
-        Debug.Log($"[HITZONE DEBUG] Found {colliders.Length} colliders inside hit zone.");
-        Debug.Log($"[HITZONE DEBUG] Found {colliders} ");
-
         foreach (Collider2D col in colliders)
         {
-            Debug.Log($"[HITZONE DEBUG] Collider: {col.name}");
-
             Note note = col.GetComponent<Note>();
             if (note != null)
             {
-                Debug.Log($"[HITZONE DEBUG] Found Note: {note.name}");
                 return note;
             }
         }
 
         return null;
     }
+
     private void ShowRating(Sprite sprite)
     {
         if (ratingImage == null) return;
@@ -121,17 +137,25 @@ public class RhythmButton : MonoBehaviour
         ratingImage.sprite = sprite;
         ratingImage.gameObject.SetActive(true);
 
-        // Hide after short time
         CancelInvoke(nameof(HideRating));
         Invoke(nameof(HideRating), 0.5f);
     }
 
     private void HideRating()
     {
-        ratingImage.gameObject.SetActive(false);
+        if (ratingImage != null)
+            ratingImage.gameObject.SetActive(false);
     }
 
-    // Debug: Draw hit zone in Scene view
+    public void RegisterMiss()
+    {
+        Debug.Log($"Miss registered by Note in button {buttonIndex}!");
+
+        if (battleBar != null)
+            battleBar.Adjust(badScoreDelta);
+
+        ShowRating(badSprite);
+    }
     private void OnDrawGizmosSelected()
     {
         if (hitZone != null)

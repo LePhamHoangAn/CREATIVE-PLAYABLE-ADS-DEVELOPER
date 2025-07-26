@@ -6,16 +6,21 @@ public class NoteSpawner : MonoBehaviour
     [Header("Music")]
     public AudioSource music;
 
-    [Header("Notes")]
+    [Header("Note Prefab")]
     public GameObject notePrefab;
-    public Transform[] lanes; // 4 spawn points
+
+    [Header("Lanes")]
+    public Transform[] lanes; //4 spawn points, ordered left to right
+
+    [Header("Buttons")]
+    public RhythmButton[] buttons; 
 
     [Header("Sprites")]
-    public Sprite[] enemySprites; // Enemy note sprites per lane
-    public Sprite[] playerSprites; // Player note sprites per lane
+    public Sprite[] enemySprites;  
+    public Sprite[] playerSprites; 
 
     [HideInInspector]
-    public Sprite[] noteSprites; // The currently active sprites (enemy or player)
+    public Sprite[] noteSprites;   
 
     [Header("Timing")]
     public float noteTravelTime = 2f;
@@ -24,38 +29,37 @@ public class NoteSpawner : MonoBehaviour
     public List<Beat> beatMap = new List<Beat>();
 
     [Header("Phase")]
-    public float enemyPhaseEndTime = 10f; // When enemy phase ends
-    public GameManager gameManager; // Link to your GameManager
+    public float enemyPhaseEndTime = 10f;
+    public GameManager gameManager;
+
+    [Header("Enemy Ref")]
+    public CharacterController enemyCharacter;
+
+    [Header("Hit Zone")]
+    public float hitZoneY = -3.6f;
 
     private int nextBeatIndex = 0;
+    private bool isActive = false;
 
     void Start()
     {
-        // Start with enemy note sprites by default
-        noteSprites = enemySprites;
-
-        if (music != null)
-        {
-            music.Play();
-        }
+        noteSprites = enemySprites; 
     }
 
     void Update()
     {
+        if (!isActive) return;
         if (nextBeatIndex >= beatMap.Count) return;
 
         float songTime = music.time;
-
         Beat nextBeat = beatMap[nextBeatIndex];
 
-        // Spawn note early so it arrives at hit zone on time
         if (songTime >= nextBeat.time - noteTravelTime)
         {
             SpawnNote(nextBeat);
             nextBeatIndex++;
         }
 
-        // If the enemy phase is over, switch to player phase
         if (gameManager != null && gameManager.enemyPhase && songTime >= enemyPhaseEndTime)
         {
             gameManager.StartPlayerPhase();
@@ -63,32 +67,66 @@ public class NoteSpawner : MonoBehaviour
         }
     }
 
+    public void StartSpawning()
+    {
+        isActive = true;
+        if (music != null) music.Play();
+    }
+
     void SpawnNote(Beat beat)
     {
         int lane = beat.lane;
+        if (lane >= lanes.Length)
+        {
+            return;
+        }
 
         Transform spawnPoint = lanes[lane];
-        GameObject noteObj = Instantiate(notePrefab, spawnPoint.position, Quaternion.identity);
 
+        GameObject noteObj = Instantiate(notePrefab, spawnPoint.position, Quaternion.identity);
         Note noteScript = noteObj.GetComponent<Note>();
 
-        // Calculate speed so the note hits the zone exactly on beat
-        float distance = spawnPoint.position.y; // If your hit zone is at Y = 0
+        noteScript.isEnemyNote = beat.isEnemyNote;
+
+        float distance = spawnPoint.position.y - hitZoneY;
         noteScript.speed = distance / noteTravelTime;
 
         noteScript.lane = lane;
         noteScript.hitTime = beat.time;
+        noteScript.hitZoneY = hitZoneY;
 
-        // Set sprite for this lane based on active phase
-        if (noteSprites != null && lane < noteSprites.Length)
+        if (beat.isEnemyNote)
         {
-            noteScript.SetSprite(noteSprites[lane]);
+            noteScript.enemyCharacter = enemyCharacter;
+        }
+        else
+        {
+            noteScript.enemyCharacter = null;
         }
 
-        // Tag the note for clarity if needed
-        noteObj.tag = beat.isEnemyNote ? "EnemyNote" : "PlayerNote";
+        if (buttons != null && lane < buttons.Length)
+        {
+            noteScript.parentButton = buttons[lane];
+        }
+        else
+        {
+            //Debug.LogWarning($"[Spawner] Missing RhythmButton for lane {lane}!");
+        }
 
-        Debug.Log($"Spawned {(beat.isEnemyNote ? "ENEMY" : "PLAYER")} note | Lane {lane}");
+        Sprite[] sourceSprites = beat.isEnemyNote ? enemySprites : playerSprites;
+
+        if (sourceSprites != null && lane < sourceSprites.Length && sourceSprites[lane] != null)
+        {
+            noteScript.SetSprite(sourceSprites[lane]);
+            //Debug.Log($"[Spawner] Set sprite for lane {lane}: {sourceSprites[lane].name}");
+        }
+        else
+        {
+            //Debug.LogWarning($"[Spawner] Sprite missing for lane {lane}!");
+        }
+        
+
+        //Debug.Log($"Spawned {(beat.isEnemyNote ? "ENEMY" : "PLAYER")} note | Lane {lane} | HitZoneY {hitZoneY}");
     }
 }
 
@@ -97,5 +135,5 @@ public class Beat
 {
     public float time;
     public int lane;
-    public bool isEnemyNote;
+    public bool isEnemyNote; 
 }

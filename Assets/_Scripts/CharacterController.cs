@@ -10,21 +10,22 @@ public class CharacterController : MonoBehaviour
     public Sprite rightSprite;
 
     [Header("Settings")]
-    public float idleTimeout = 0.2f; // time in seconds to return to idle
+    public float idleTimeout = 0.2f;
 
     private SpriteRenderer spriteRenderer;
-    private float lastPressTime;
+    private float lastSetTime;
 
     private void Awake()
     {
-        spriteRenderer = GetComponent<SpriteRenderer>();
+        if (spriteRenderer == null)
+            spriteRenderer = GetComponent<SpriteRenderer>();
+
         SetIdle();
     }
 
     private void Update()
     {
-        // Return to idle if no press for some time
-        if (Time.time - lastPressTime > idleTimeout)
+        if (Time.time - lastSetTime > idleTimeout)
         {
             SetIdle();
         }
@@ -32,7 +33,10 @@ public class CharacterController : MonoBehaviour
 
     public void SetDirection(string direction)
     {
-        lastPressTime = Time.time;
+        lastSetTime = Time.time;
+
+        if (spriteRenderer == null)
+            spriteRenderer = GetComponent<SpriteRenderer>();
 
         switch (direction)
         {
@@ -54,8 +58,38 @@ public class CharacterController : MonoBehaviour
         }
     }
 
+    public void SetDirection(int laneIndex)
+    {
+        lastSetTime = Time.time;
+
+        if (spriteRenderer == null)
+            spriteRenderer = GetComponent<SpriteRenderer>();
+
+        switch (laneIndex)
+        {
+            case 0:
+                spriteRenderer.sprite = leftSprite;
+                break;
+            case 1:
+                spriteRenderer.sprite = downSprite;
+                break;
+            case 2:
+                spriteRenderer.sprite = upSprite;
+                break;
+            case 3:
+                spriteRenderer.sprite = rightSprite;
+                break;
+            default:
+                SetIdle();
+                break;
+        }
+    }
+
     private void SetIdle()
     {
+        if (spriteRenderer == null)
+            spriteRenderer = GetComponent<SpriteRenderer>();
+
         spriteRenderer.sprite = idleSprite;
     }
 }

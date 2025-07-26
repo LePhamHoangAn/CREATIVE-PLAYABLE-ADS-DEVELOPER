@@ -3,18 +3,30 @@ using UnityEngine;
 public class Note : MonoBehaviour
 {
     [Header("Note Settings")]
-    public float speed = 5f;
-    public float hitTime;  // When this note should hit exactly
-    public int lane;       // Lane index (0–3)
+    public float speed = 5f;       
+    public float hitTime;          
+    public int lane;               
 
     [Header("Rendering")]
     public SpriteRenderer spriteRenderer;
 
+    [Header("Hit Zone")]
+    public float hitZoneY = -3.6f;    
+
+    [Header("Reference")]
+    public CharacterController enemyCharacter;
+    public RhythmButton parentButton;
+
+    [Header("Note Type")]
+    public bool isEnemyNote = true;  
+
+    [Header("Hittable")]
     [HideInInspector] public bool isHittable = false;
+
+    private bool alreadyMissed = false;
 
     void Start()
     {
-        // Auto-find SpriteRenderer if not linked
         if (spriteRenderer == null)
         {
             spriteRenderer = GetComponent<SpriteRenderer>();
@@ -23,11 +35,26 @@ public class Note : MonoBehaviour
 
     void Update()
     {
-        // Move downwards each frame
         transform.position += Vector3.down * speed * Time.deltaTime;
 
-        // Destroy if far below screen
-        if (transform.position.y < -10f)
+        if (!alreadyMissed && transform.position.y <= hitZoneY)
+        {
+            alreadyMissed = true;
+
+            if (enemyCharacter != null)
+            {
+                enemyCharacter.SetDirection(lane);
+            }
+
+            if (parentButton != null && !isEnemyNote)
+            {
+                parentButton.RegisterMiss();
+            }
+
+            Destroy(gameObject);
+        }
+
+        if (transform.position.y < -20f)
         {
             Destroy(gameObject);
         }
